@@ -51,6 +51,7 @@ function _init()
 end
 
 function loadlevel()
+	gems = {}
 	generatemap()
 	player.x = startx
 	player.y = starty
