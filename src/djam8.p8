@@ -277,7 +277,7 @@ function _draw()
 	if startx == 0 and starty == 0 then
 		print("failed to generate level correctly :(",8)
 	else
-		spr_r(16,startx-8,starty-8,portalangle,2,2)
+		spr_r(8,startx-8,starty-8,portalangle,2,2)
 	end
 	spr(player.s_sprite+5,player.x-4,player.y-4)
 	drawgems()
@@ -309,26 +309,29 @@ end
 --gfx
 
 function spr_r(s,x,y,a,w,h)
- sw=(w or 1)*8
- sh=(h or 1)*8
- sx=(s%8)*8
- sy=flr(s/8)*8
- x0=flr(0.5*sw)
- y0=flr(0.5*sh)
- a=a/360
- sa=sin(a)
- ca=cos(a)
- for ix=0,sw-1 do
-  for iy=0,sh-1 do
-   dx=ix-x0
-   dy=iy-y0
-   xx=flr(dx*ca-dy*sa+x0)
-   yy=flr(dx*sa+dy*ca+y0)
-   if (xx>=0 and xx<sw and yy>=0 and yy<=sh) then
-    pset(x+ix,y+iy,sget(sx+xx,sy+yy))
-   end
-  end
- end
+    sw=(w or 1)*8
+    sh=(h or 1)*8
+    sx=(s%8)*8
+    sy=flr(s/8)*8
+    x0=flr(0.5*sw)
+    y0=flr(0.5*sh)
+    a=a/360
+    sa=sin(a)
+    ca=cos(a)
+    for ix=0,sw-1 do
+        for iy=0,sh-1 do
+            dx=ix-x0
+            dy=iy-y0
+            xx=flr(dx*ca-dy*sa+x0)
+            yy=flr(dx*sa+dy*ca+y0)
+            if (xx>=0 and xx<sw and yy>=0 and yy<sh) then
+                local col = sget(sx+xx,sy+yy)
+                if col != 0 then
+                    pset(x+ix,y+iy,col)
+                end
+            end
+        end
+    end
 end
 
 function add_fx(x,y,die,dx,dy,grav,grow,shrink,r,c_table)
