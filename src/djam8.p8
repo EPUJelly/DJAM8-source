@@ -12,23 +12,34 @@ cam = {
 }
 
 player = {
+	active = true,
 	x = 0,
 	y = 0,
 	z = 0,
+	w = 8,
+	h = 8,
 	dx = 0,
 	dy = 0,
 	speed = 2,
 	speedwater = 1,
+	speeddamage = 0.2,
 	acceleration = 0.3,
 	s_sprites = {6,7,8},
 	canj = true,
 	isj = false,
 	s_sprite = 1,
 	gravity = 1,
-	jumpheight = 7
+	jumpheight = 7,
+	health = 3,
+	ishurting = false
 }
 
-iterator1 = 0
+decayiterator = 0
+decayinterval = 120
+
+healthiterator = 0
+timetotakedamage = 60
+hasdoneinitdamage = false
 
 
 function _init()
@@ -40,6 +51,8 @@ function loadlevel()
 	player.x = startx
 	player.y = starty
 	--setupcam()
+	player.health = 3
+	player.active = true
 end
 
 function setupcam()
@@ -50,60 +63,157 @@ end
 function _update60()
 	moveplayer()
  movecam()
+ decaylevel()
+end
+
+function check_flag_collision(player,flag)
+    -- get the player's position and dimensions (assuming player has x, y, w, h properties)
+    local px, py = player.x, player.y
+    local pw, ph = player.w, player.h
+
+    -- loop over the player's bounding box to check for collisions
+    for x = px, px + pw - 1, 8 do
+        for y = py, py + ph - 1, 8 do
+            -- get the tile position in the map
+            local tile_x = flr(x / 8)
+            local tile_y = flr(y / 8)
+
+            -- get the tile value and check if it has flag 7 set
+            local tile = mget(tile_x, tile_y)
+            if fget(tile, flag) then
+                return true
+            end
+        end
+    end
+
+    return false
 end
 
 function moveplayer()
-	player.dx = lerp(player.dx,0,player.acceleration)
-	player.dy = lerp(player.dy,0,player.acceleration)
+	if player.active then
+		player.dx = lerp(player.dx,0,player.acceleration)
+		player.dy = lerp(player.dy,0,player.acceleration)
+		
+		if btn(⬆️) then
+			if check_flag_collision(player,0) then
+				player.dy = lerp(player.dy,-player.speedwater,player.acceleration)
+			elseif check_flag_collision(player,1) then
+				player.dy = lerp(player.dy,-player.speed,player.acceleration)
+			elseif check_flag_collision(player,2) then
+				player.dy = lerp(player.dy,-player.speeddamage,player.acceleration)
+			else
+				player.dy = lerp(player.dy,-player.speedwater,player.acceleration)
+			end
+		end
+		if btn(⬇️) then
+			if check_flag_collision(player,0) then
+				player.dy = lerp(player.dy,player.speedwater,player.acceleration)
+			elseif check_flag_collision(player,1) then
+				player.dy = lerp(player.dy,player.speed,player.acceleration)
+			elseif check_flag_collision(player,2) then
+				player.dy = lerp(player.dy,player.speeddamage,player.acceleration)
+			else
+				player.dy = lerp(player.dy,player.speedwater,player.acceleration)
+			end
+		end
+		if btn(⬅️) then
+			if check_flag_collision(player,0) then
+				player.dx = lerp(player.dx,-player.speedwater,player.acceleration)
+			elseif check_flag_collision(player,1) then
+				player.dx = lerp(player.dx,-player.speed,player.acceleration)
+			elseif check_flag_collision(player,2) then
+				player.dx = lerp(player.dx,-player.speeddamage,player.acceleration)
+			else
+				player.dx = lerp(player.dx,-player.speedwater,player.acceleration)
+			end
+		end
+		if btn(➡️) then
+			if check_flag_collision(player,0) then
+				player.dx = lerp(player.dx,player.speedwater,player.acceleration)
+			elseif check_flag_collision(player,1) then
+				player.dx = lerp(player.dx,player.speed,player.acceleration)
+			elseif check_flag_collision(player,2) then
+				player.dx = lerp(player.dx,player.speeddamage,player.acceleration)
+			else
+				player.dx = lerp(player.dx,player.speedwater,player.acceleration)
+			end
+		end
 	
-	if btn(⬆️) then
-		player.dy = lerp(player.dy,-player.speed,player.acceleration)
-	end
-	if btn(⬇️) then
-		player.dy = lerp(player.dy,player.speed,player.acceleration)
-	end
-	if btn(⬅️) then
-		player.dx = lerp(player.dx,-player.speed,player.acceleration)
-	end
-	if btn(➡️) then
-		player.dx = lerp(player.dx,player.speed,player.acceleration)
-	end
-	
-	if player.z > 0 then
-		player.z -= player.gravity
-		player.canj = false
-	else
-		player.canj = true
-	end
+		if player.z > 0 then
+			player.z -= player.gravity
+			player.canj = false
+		else
+			player.canj = true
+		end
 	
 	
 	
-	if player.canj then
+		if player.canj then
+			if btnp(❎) then
+				player.isj = true
+				player.z = 0.1
+				player.gravity = -player.gravity
+			end
+		end
+		if player.isj then
+			if player.z > player.jumpheight then
+				player.gravity = -player.gravity
+			end
+		end
+	
+		if player.z < 3 then
+			player.s_sprite = player.s_sprites[1] -5
+		elseif player.z < 4 and player.z > 3 then
+			player.s_sprite = player.s_sprites[2] -5
+		elseif player.z < 5 and player.z > 4 then
+			player.s_sprite = player.s_sprites[3] -5
+		end
+	
+	
+		if check_flag_collision(player,2) then
+			player.ishurting = true
+		else
+			player.ishurting = false
+			hasdoneinitdamage = false
+		end
+	
+		player.x += player.dx
+		player.y += player.dy
+	
+		if player.ishurting then
+			if hasdoneinitdamage == false then
+				healthiterator = timetotakedamage
+				hasdoneinitdamage = true
+			end
+			if healthiterator < 60 then
+				healthiterator += 1
+			else
+				healthiterator = 0
+				damage()
+			end
+		end
+	end
+	
+	
+	if player.health == 0 then
+		player.active = false
 		if btnp(❎) then
-			player.isj = true
-			player.z = 0.1
-			player.gravity = -player.gravity
+			loadlevel()
 		end
 	end
-	if player.isj then
-		if player.z > player.jumpheight then
-			player.gravity = -player.gravity
-		end
-	end
-	
-	if player.z < 3 then
-		player.s_sprite = player.s_sprites[1] -5
-	elseif player.z < 4 and player.z > 3 then
-		player.s_sprite = player.s_sprites[2] -5
-	elseif player.z < 5 and player.z > 4 then
-		player.s_sprite = player.s_sprites[3] -5
-	end
-	
-	
+end
 
-	
-	player.x += player.dx
-	player.y += player.dy
+function decaylevel()
+	if decayiterator < decayinterval then
+		decayiterator += 1
+	else
+		mset(rnd(128)-1,rnd(64)-1,18)
+		decayiterator = 0
+	end
+end
+
+function damage()
+	player.health -= 1
 end
 
 function movecam()
@@ -122,7 +232,28 @@ function _draw()
 	end
 	spr(player.s_sprite+5,player.x-4,player.y-4)
 	spr(1,player.x-4,player.y-4-player.z)
-	
+	drawhud()
+	if player.active == false then
+	 cls()
+	 drawgameover()
+	end
+end
+
+function drawgameover()
+	camera(0,0)
+	print("game over :(",64-20 -3,64+2,1)
+	print("game over :(",64-20 -3,64+1,2)
+	print("game over :(",64-20 -3,64,8)
+
+	print("❎ restart",64-15 - 3,64+9,8)
+	print("🅾️ bact to menu",64-25 -3,64+18,8)
+end
+
+function drawhud()
+	rectfill(0+cam.x-64,0+cam.y-64,128+cam.x-64,8+cam.y-64,0)
+	for i=0,player.health-1,1 do
+		spr(9,i * 9 + cam.x-64,1+cam.y-64)
+	end
 end
 -->8
 --particles
@@ -280,6 +411,11 @@ function getneighbours(x,y,c,n)
  return nc
 end
 
+function drawloader()
+	cls()
+	print("loading...",64-15,64,7)
+end
+
 function generatemap()
  local mx,my=127,63
  for x=0,mx do
@@ -289,6 +425,7 @@ function generatemap()
  end
  --smooth noise
  for i=0,4 do--smoothing iterations
+ 	drawloader()
   for x=0,mx do
    for y=0,my do
     local nc=getneighbours(x,y,4)--neighbouring shallow tiles
@@ -324,14 +461,22 @@ function generatemap()
  end
 end
 __gfx__
-00000000bbbbbbbbaaaaaaaa33333333222222221111111100000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000bbbbbbbbaaaaaaaa33333333222222221111111100000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700bbbbbbbbaaaaaaaa33333333222222221111111100000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000bbbbbbbbaaaaaaaa33333333222222221111111100000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000bbbbbbbbaaaaaaaa33333333222222221111111100000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700bbbbbbbbaaaaaaaa33333333222222221111111105555550005555000005500000000000000000000000000000000000000000000000000000000000
-00000000bbbbbbbbaaaaaaaa33333333222222221111111151111115051111500051150000000000000000000000000000000000000000000000000000000000
+00000000bbbbbbbbaaaaaaaa33333333222222221111111100000000000000000000000002200220000000000000000000000000000000000000000000000000
+00000000bbbbbbbbaaaaaaaa33333333222222221111111100000000000000000000000028822e82000000000000000000000000000000000000000000000000
+00700700bbbbbbbbaaaaaaaa333333332222222211111111000000000000000000000000288888e2000000000000000000000000000000000000000000000000
+00077000bbbbbbbbaaaaaaaa33333333222222221111111100000000000000000000000028888882000000000000000000000000000000000000000000000000
+00077000bbbbbbbbaaaaaaaa33333333222222221111111100000000000000000000000002888820000000000000000000000000000000000000000000000000
+00700700bbbbbbbbaaaaaaaa33333333222222221111111105555550005555000005500000288200000000000000000000000000000000000000000000000000
+00000000bbbbbbbbaaaaaaaa33333333222222221111111151111115051111500051150000022000000000000000000000000000000000000000000000000000
 00000000bbbbbbbbaaaaaaaa33333333222222221111111105555550005555000005500000000000000000000000000000000000000000000000000000000000
+eeeeeeeeeeeeeeee8888888800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+eeeeeeeeeeeeeeee8888888800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+eeeeeeeeeeeeeeee8888888800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+eeeeeeeeeeeeeeee8888888800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+eeeeeeeeeeeeeeee8888888800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+eeeeeeeeeeeeeeee8888888800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+eeeeeeeeeeeeeeee8888888800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+eeeeeeeeeeeeeeee8888888800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -340,11 +485,6 @@ eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000
 eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+__gff__
+0000020202010000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
