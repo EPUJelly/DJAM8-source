@@ -43,7 +43,6 @@ healthiterator = 0
 timetotakedamage = 60
 hasdoneinitdamage = false
 
-iterator1 = 0
 
 
 function _init()
@@ -226,6 +225,7 @@ function spawngems()
 		x = rnd(128*8),
 		y = rnd(64*8),
 		shineiterator = 1,
+		secondaryiterator = 1
 	}
 	add(gems,gem)
 end
@@ -238,17 +238,18 @@ end
 
 function updategems()
 	for i,gem in ipairs(gems) do
-		if iterator1 < 5 then
-			iterator1 += 1
+		if gem.secondaryiterator < 5 then
+			gem.secondaryiterator += 1
 		else
-		 iterator1 = 0
-		 if gem.shineiterator < 4 then
-		 	gem.shineiterator += 1
-		 else
-		 	gem.shineiterator = 1
-		 end
+		 gem.secondaryiterator = 0
+			if gem.shineiterator < 4 then
+				gem.shineiterator += 1
+			else
+				gem.shineiterator = 1
+			end
 		end
 	end
+
 end
 
 function damage()
